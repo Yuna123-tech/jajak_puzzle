@@ -41,26 +41,29 @@
             .no-print {
                 display: none;
             }
-            .puzzle-piece-container {
+            .puzzle-pieces-container {
+                width: 21cm;
+                margin: 0 auto;
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
-                gap: 16px; /* Adjust gap for printing */
+                gap: 1cm;
             }
             .puzzle-piece {
                 box-shadow: none !important;
-                border: 1px solid #ddd !important;
-                width: 250px; /* Fixed width for consistent printing */
+                border: 2px dashed #000 !important;
+                width: 45%;
+                box-sizing: border-box;
             }
             .puzzle-piece img {
                 width: 100%;
                 height: auto;
             }
-            .puzzle-piece p {
-                text-align: center;
-                font-size: 1.25rem;
-                font-weight: bold;
-                margin-top: 8px;
+            .puzzle-piece-number {
+                background-color: transparent;
+                color: #000;
+                bottom: 4px;
+                right: 4px;
             }
         }
     </style>
@@ -91,7 +94,7 @@
         <!-- Puzzle Display Area -->
         <div id="puzzleContainer" class="mt-8">
             <h2 class="text-2xl font-bold text-center text-gray-700 mb-4">퍼즐 조각</h2>
-            <div id="puzzlePieces" class="flex flex-wrap justify-center gap-4">
+            <div id="puzzlePieces" class="flex flex-wrap justify-center gap-4 puzzle-pieces-container">
                 <!-- Puzzle pieces will be dynamically added here -->
             </div>
         </div>
@@ -120,14 +123,13 @@
             const ctx = hiddenCanvas.getContext('2d');
 
             const canvasWidth = 1200;
-            const lineHeight = 160; // Approximate line height based on font size
+            const lineHeight = 160;
 
             function generatePuzzle() {
                 const puzzleText = puzzleTextEl.value || "우리 반의 평화는 우리 모두의 협력으로 만들어집니다";
                 const pieceCount = parseInt(pieceCountEl.value, 10);
 
                 if (isNaN(pieceCount) || pieceCount < 4 || pieceCount > 64) {
-                    // Using a modal instead of alert for better user experience
                     showModal('조각 수는 4에서 64 사이의 값으로 입력해주세요.');
                     return;
                 }
@@ -137,7 +139,6 @@
 
                 ctx.font = `150px Jua, sans-serif`;
                 
-                // Function to get wrapped lines and calculate height
                 function getWrappedLines(text, maxWidth, lineHeight) {
                     const words = text.split(' ');
                     let line = '';
@@ -246,7 +247,6 @@
                 document.body.insertAdjacentHTML('beforeend', modalHtml);
             }
             
-            // Re-assigning the global function for the modal
             window.showModal = showModal;
 
             generateBtn.addEventListener('click', generatePuzzle);
