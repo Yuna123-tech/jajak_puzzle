@@ -37,18 +37,10 @@
                 print-color-adjust: exact;
             }
             
-            #printable-image-container {
-                width: 100%;
-                height: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-
-            #printableImage {
+            #hiddenCanvas.print-canvas {
+                display: block !important;
                 max-width: 100%;
                 max-height: 100%;
-                object-fit: contain;
             }
 
             @page {
@@ -93,14 +85,8 @@
         <canvas id="hiddenCanvas" class="hidden"></canvas>
     </div>
 
-    <!-- 인쇄 전용 영역 -->
-    <div id="print-area" class="hidden">
-        <div class="flex justify-center">
-            <div class="relative inline-block" id="printable-image-container">
-                <img id="printableImage" src="" alt="인쇄용 퍼즐 그림" style="width: 100%; height: auto;">
-            </div>
-        </div>
-    </div>
+    <!-- 인쇄 전용 영역 (이제 캔버스만 포함) -->
+    <div id="print-area" class="hidden"></div>
 
     <script>
         window.onload = function() {
@@ -111,7 +97,6 @@
             const originalImageEl = document.getElementById('originalImage');
             const hiddenCanvas = document.getElementById('hiddenCanvas');
             const ctx = hiddenCanvas.getContext('2d');
-            const printableImageEl = document.getElementById('printableImage');
             const printArea = document.getElementById('print-area');
             
             // 커스텀 모달 창을 띄우는 함수
@@ -232,17 +217,21 @@
             
             // 인쇄 미리보기를 보여주는 함수
             function showPrintPreview() {
-                const imageDataUrl = hiddenCanvas.toDataURL();
-                printableImageEl.src = imageDataUrl;
-                
+                // 인쇄를 위해 캔버스를 인쇄 영역으로 이동
+                printArea.appendChild(hiddenCanvas);
+                hiddenCanvas.classList.add('print-canvas');
+
+                // 본문 숨기기
                 document.getElementById('app').style.display = 'none';
-                printArea.style.display = 'block';
+
                 window.print();
                 
-                // 인쇄창이 닫힌 후 원래 화면으로 돌아오기
+                // 인쇄창이 닫힌 후 원래 화면으로 복귀
                 setTimeout(() => {
+                    hiddenCanvas.classList.remove('print-canvas');
                     document.getElementById('app').style.display = 'block';
-                    printArea.style.display = 'none';
+                    document.getElementById('originalContainer').appendChild(hiddenCanvas);
+                    
                 }, 500);
             }
 
