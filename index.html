@@ -32,10 +32,17 @@
             }
             #print-area {
                 display: block !important;
-                width: 21cm; /* A4 width */
-                height: 29.7cm; /* A4 height */
+                width: 29.7cm; /* A4 width in landscape */
+                height: 21cm; /* A4 height in landscape */
                 margin: 0 auto;
                 position: relative;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            @page {
+                size: a4 landscape;
+                margin: 0;
             }
         }
     </style>
