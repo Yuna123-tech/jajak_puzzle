@@ -16,10 +16,6 @@
         .container {
             max-width: 960px;
         }
-        .puzzle-piece-container {
-            position: relative;
-            display: inline-block;
-        }
         @media print {
             body {
                 background-color: white;
@@ -27,7 +23,7 @@
             .no-print {
                 display: none;
             }
-            #app, #puzzleContainer, #puzzlePieces, #originalContainer {
+            #app {
                 display: none;
             }
             #print-area {
@@ -38,6 +34,20 @@
                 position: relative;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
+            }
+            
+            #printable-image-container {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            #printableImage {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
             }
 
             @page {
@@ -69,18 +79,10 @@
                 <button id="printBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105">인쇄용 퍼즐 미리보기</button>
             </div>
         </div>
-
-        <!-- Puzzle Display Area (for on-screen preview) -->
-        <div id="puzzleContainer" class="mt-8">
-            <h2 class="text-2xl font-bold text-center text-gray-700 mb-4">퍼즐 조각 미리보기</h2>
-            <div id="puzzlePieces" class="flex flex-wrap justify-center gap-4">
-                <!-- Puzzle pieces will be dynamically added here -->
-            </div>
-        </div>
         
         <!-- Original Image Reference (for on-screen preview) -->
         <div id="originalContainer" class="mt-8 border-t pt-8">
-            <h2 class="text-2xl font-bold text-center text-gray-700 mb-4">전체 그림 (참고용)</h2>
+            <h2 class="text-2xl font-bold text-center text-gray-700 mb-4">완성된 퍼즐 (절취선 포함)</h2>
             <div class="flex justify-center">
                 <img id="originalImage" src="" alt="전체 퍼즐 그림" class="rounded-lg shadow-xl" style="display: none;">
             </div>
@@ -95,7 +97,6 @@
         <div class="flex justify-center">
             <div class="relative inline-block" id="printable-image-container">
                 <img id="printableImage" src="" alt="인쇄용 퍼즐 그림" style="width: 100%; height: auto;">
-                <div id="cut-lines-container" class="absolute inset-0"></div>
             </div>
         </div>
     </div>
@@ -106,175 +107,12 @@
             const printBtn = document.getElementById('printBtn');
             const puzzleTextEl = document.getElementById('puzzleText');
             const pieceCountEl = document.getElementById('pieceCount');
-            const puzzlePiecesEl = document.getElementById('puzzlePieces');
             const originalImageEl = document.getElementById('originalImage');
             const hiddenCanvas = document.getElementById('hiddenCanvas');
             const ctx = hiddenCanvas.getContext('2d');
             const printableImageEl = document.getElementById('printableImage');
-            const cutLinesContainer = document.getElementById('cut-lines-container');
             const printArea = document.getElementById('print-area');
-
-            const canvasWidth = 1200;
-            const lineHeight = 160;
-            let currentPieces = [];
-
-            function generatePuzzle() {
-                const puzzleText = puzzleTextEl.value || "우리 반의 평화는 우리 모두의 협력으로 만들어집니다";
-                const pieceCount = parseInt(pieceCountEl.value, 10);
-
-                if (isNaN(pieceCount) || pieceCount < 4 || pieceCount > 64) {
-                    showModal('조각 수는 4에서 64 사이의 값으로 입력해주세요.');
-                    return;
-                }
-
-                puzzlePiecesEl.innerHTML = '';
-                originalImageEl.style.display = 'none';
-
-                ctx.font = `150px Jua, sans-serif`;
-                
-                function getWrappedLines(text, maxWidth, lineHeight) {
-                    const words = text.split(' ');
-                    let line = '';
-                    let lines = [];
-                    
-                    for(let n = 0; n < words.length; n++) {
-                        let testLine = line + words[n] + ' ';
-                        let metrics = ctx.measureText(testLine);
-                        let testWidth = metrics.width;
-                        if (testWidth > maxWidth && n > 0) {
-                            lines.push(line);
-                            line = words[n] + ' ';
-                        } else {
-                            line = testLine;
-                        }
-                    }
-                    lines.push(line);
-                    return lines;
-                }
-
-                const lines = getWrappedLines(puzzleText, canvasWidth - 50, lineHeight);
-                const canvasHeight = lines.length * lineHeight;
-                hiddenCanvas.width = canvasWidth;
-                hiddenCanvas.height = canvasHeight;
-
-                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-                ctx.fillStyle = '#4a90e2';
-                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-                ctx.fillStyle = 'white';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.font = `150px Jua, sans-serif`;
-
-                let startY = canvasHeight / 2 - ((lines.length - 1) * lineHeight / 2);
-                for (let i = 0; i < lines.length; i++) {
-                    ctx.fillText(lines[i].trim(), canvasWidth / 2, startY + i * lineHeight);
-                }
-
-                const imageDataUrl = hiddenCanvas.toDataURL();
-                originalImageEl.src = imageDataUrl;
-                originalImageEl.style.display = 'block';
-
-                const cols = Math.ceil(Math.sqrt(pieceCount));
-                const rows = Math.ceil(pieceCount / cols);
-                const pieceWidth = canvasWidth / cols;
-                const pieceHeight = canvasHeight / rows;
-                currentPieces = { cols, rows, pieceWidth, pieceHeight, image: imageDataUrl };
-
-                for (let i = 0; i < pieceCount; i++) {
-                    const col = i % cols;
-                    const row = Math.floor(i / cols);
-
-                    const pieceCanvas = document.createElement('canvas');
-                    pieceCanvas.width = pieceWidth;
-                    pieceCanvas.height = pieceHeight;
-                    const pieceCtx = pieceCanvas.getContext('2d');
-
-                    pieceCtx.drawImage(
-                        hiddenCanvas,
-                        col * pieceWidth,
-                        row * pieceHeight,
-                        pieceWidth,
-                        pieceHeight,
-                        0,
-                        0,
-                        pieceWidth,
-                        pieceHeight
-                    );
-
-                    const pieceDiv = document.createElement('div');
-                    pieceDiv.className = 'puzzle-piece bg-white p-2 rounded-lg shadow-md flex flex-col items-center justify-center space-y-2';
-                    pieceDiv.style.width = `${100 / cols - 2}%`;
-                    pieceDiv.style.maxWidth = `250px`;
-
-                    const pieceImg = document.createElement('img');
-                    pieceImg.src = pieceCanvas.toDataURL();
-                    pieceImg.alt = `퍼즐 조각 ${i + 1}`;
-                    pieceImg.className = 'rounded-md border border-gray-200';
-
-                    const pieceNumber = document.createElement('div');
-                    pieceNumber.textContent = `조각 ${i + 1} / ${pieceCount}`;
-                    pieceNumber.className = 'text-gray-700 font-bold text-sm bg-white bg-opacity-70 px-2 py-1 rounded-full absolute bottom-2 right-2';
-
-                    pieceDiv.appendChild(pieceImg);
-                    pieceDiv.appendChild(pieceNumber);
-                    puzzlePiecesEl.appendChild(pieceDiv);
-                }
-            }
             
-            function showPrintPreview() {
-                const { cols, rows, pieceWidth, pieceHeight, image } = currentPieces;
-
-                // Set image source for printing
-                printableImageEl.src = image;
-
-                // Clear previous cut lines
-                cutLinesContainer.innerHTML = '';
-
-                // Create horizontal cut lines
-                for (let i = 1; i < rows; i++) {
-                    const line = document.createElement('div');
-                    line.style.cssText = `
-                        position: absolute;
-                        top: ${i * (100 / rows)}%;
-                        left: 0;
-                        width: 100%;
-                        height: 0;
-                        border-top: 2px dashed black;
-                    `;
-                    cutLinesContainer.appendChild(line);
-                }
-
-                // Create vertical cut lines
-                for (let i = 1; i < cols; i++) {
-                    const line = document.createElement('div');
-                    line.style.cssText = `
-                        position: absolute;
-                        left: ${i * (100 / cols)}%;
-                        top: 0;
-                        height: 100%;
-                        width: 0;
-                        border-left: 2px dashed black;
-                    `;
-                    cutLinesContainer.appendChild(line);
-                }
-                
-                // Show only the print area
-                document.getElementById('app').style.display = 'none';
-                printArea.style.display = 'block';
-
-                // Automatically open print dialog
-                window.print();
-                
-                // Hide print area after printing (or canceling)
-                // Using a timeout to ensure the print dialog has time to open
-                setTimeout(() => {
-                    document.getElementById('app').style.display = 'block';
-                    printArea.style.display = 'none';
-                }, 500);
-            }
-
-            // A simple modal for user alerts, replacing the native alert()
             function showModal(message) {
                 const modalHtml = `
                     <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
@@ -289,7 +127,120 @@
                 `;
                 document.body.insertAdjacentHTML('beforeend', modalHtml);
             }
+
+            function generatePuzzle() {
+                const puzzleText = puzzleTextEl.value || "우리 반의 평화는 우리 모두의 협력으로 만들어집니다";
+                const pieceCount = parseInt(pieceCountEl.value, 10);
+
+                if (isNaN(pieceCount) || pieceCount < 4 || pieceCount > 64) {
+                    showModal('조각 수는 4에서 64 사이의 값으로 입력해주세요.');
+                    return;
+                }
+
+                originalImageEl.style.display = 'none';
+
+                // A4 가로 비율(297mm x 210mm)에 맞춰 캔버스 크기 계산
+                const aspect_ratio = 297 / 210;
+                const canvasHeight = 1000;
+                const canvasWidth = canvasHeight * aspect_ratio;
+                
+                hiddenCanvas.width = canvasWidth;
+                hiddenCanvas.height = canvasHeight;
+                
+                // 텍스트 줄바꿈 및 폰트 크기 계산
+                let fontSize = 200;
+                let textLines = [];
+                let attempts = 0;
+                const maxLineLength = canvasWidth - 50;
+
+                while(true) {
+                    ctx.font = `${fontSize}px Jua, sans-serif`;
+                    let words = puzzleText.split(' ');
+                    let line = '';
+                    textLines = [];
+                    for(let i = 0; i < words.length; i++) {
+                        let testLine = line + words[i] + ' ';
+                        if (ctx.measureText(testLine).width > maxLineLength && line.length > 0) {
+                            textLines.push(line.trim());
+                            line = words[i] + ' ';
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    textLines.push(line.trim());
+
+                    if ((textLines.length * (fontSize * 1.2)) <= canvasHeight * 0.9 && fontSize > 10) {
+                        break;
+                    }
+                    fontSize -= 5;
+                    attempts++;
+                    if (attempts > 50) {
+                        break;
+                    }
+                }
+                
+                // 배경 그리기
+                ctx.fillStyle = '#4a90e2';
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+                // 텍스트 그리기
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const lineHeight = fontSize * 1.2;
+                const totalTextHeight = textLines.length * lineHeight;
+                const startY = (canvasHeight - totalTextHeight) / 2 + lineHeight / 2;
+                
+                for (let i = 0; i < textLines.length; i++) {
+                    ctx.fillText(textLines[i], canvasWidth / 2, startY + i * lineHeight);
+                }
+
+                // 절취선 그리기
+                const cols = Math.ceil(Math.sqrt(pieceCount));
+                const rows = Math.ceil(pieceCount / cols);
+                const pieceWidth = canvasWidth / cols;
+                const pieceHeight = canvasHeight / rows;
+
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([10, 5]);
+
+                // 가로 절취선
+                for (let i = 1; i < rows; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * pieceHeight);
+                    ctx.lineTo(canvasWidth, i * pieceHeight);
+                    ctx.stroke();
+                }
+
+                // 세로 절취선
+                for (let i = 1; i < cols; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * pieceWidth, 0);
+                    ctx.lineTo(i * pieceWidth, canvasHeight);
+                    ctx.stroke();
+                }
+
+                // 전체 이미지와 개별 조각 생성
+                const imageDataUrl = hiddenCanvas.toDataURL();
+                originalImageEl.src = imageDataUrl;
+                originalImageEl.style.display = 'block';
+            }
             
+            function showPrintPreview() {
+                const imageDataUrl = hiddenCanvas.toDataURL();
+                printableImageEl.src = imageDataUrl;
+                
+                document.getElementById('app').style.display = 'none';
+                printArea.style.display = 'block';
+                window.print();
+                
+                setTimeout(() => {
+                    document.getElementById('app').style.display = 'block';
+                    printArea.style.display = 'none';
+                }, 500);
+            }
+
             window.showModal = showModal;
 
             generateBtn.addEventListener('click', generatePuzzle);
